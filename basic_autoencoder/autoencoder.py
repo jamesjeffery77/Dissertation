@@ -1,38 +1,49 @@
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import numpy as np
 
-class Autoencoder(nn.Module):
+class AE(nn.Module):
     def __init__(self):
-        super(Autoencoder, self).__init__()
+        super(AE, self).__init__()
+        
+        # encoder
         self.encoder = nn.Sequential(
-            nn.Linear(784, 128),
+            nn.Linear(28 * 28, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Linear(64, 10)
+            nn.Linear(64, 36),
+            nn.ReLU(),
+            nn.Linear(36, 18),
+            nn.ReLU(),
+            nn.Linear(18, 9)
         )
+
+        # decoder
         self.decoder = nn.Sequential(
-            nn.Linear(10, 64),
+            nn.Linear(9, 18),
+            nn.ReLU(),
+            nn.Linear(18, 36),
+            nn.ReLU(),
+            nn.Linear(36, 64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU(),
-            nn.Linear(128, 784),
+            nn.Linear(128, 28 * 28),
             nn.Sigmoid()
         )
 
     def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
 
     def encode(self, x):
         return self.encoder(x)
-
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
 
 # Parameters
 learning_rate = 1e-3
@@ -47,10 +58,11 @@ train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle=Tru
 test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=False)
 
 # Model, Loss and Optimizer
-model = Autoencoder()
+model = AE()
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
+print("Starting training process...")
 # Training
 for epoch in range(epochs):
     for data, _ in train_loader:
@@ -63,6 +75,8 @@ for epoch in range(epochs):
         optimizer.step()
 
     print(f'Epoch: {epoch+1}, Loss: {loss.item()}')
+
+print("Training completed. Starting encoding and t-SNE process...")
 
 # Testing
 model.eval()  # Switch the model to evaluation mode
@@ -81,6 +95,14 @@ with torch.no_grad():
 encoded_images = np.array(encoded_images)
 
 # Apply t-SNE
+print("Starting t-SNE...")
 tsne = TSNE(n_components=2, random_state=0)
 tsne_obj = tsne.fit_transform(encoded_images)
-print("completed t-SNE")
+print("Completed t-SNE.")
+
+# Plotting
+print("Starting plotting...")
+scatter = plt.scatter(tsne_obj[:, 0], tsne_obj[:, 1], c=targets, cmap='viridis')
+plt.colorbar(scatter)
+plt.show()
+print("Completed Plotting.")
