@@ -78,9 +78,36 @@ for epoch in range(epochs):
 
 print("Training completed. Starting encoding and t-SNE process...")
 
-# Testing
+# Training...
+
+# Testing and Visualization
 model.eval()  # Switch the model to evaluation mode
 
+# Visualizing the reconstructed images
+with torch.no_grad():
+    # Take one batch from your test loader
+    data, _ = next(iter(test_loader)) 
+    data = data.view(data.size(0), -1)  # Reshape the data
+    encoded_imgs = model.encode(data)
+    decoded_imgs = model.decoder(encoded_imgs)  # Get reconstructed images through the decoder only
+
+
+    # Get the first 5 images from the batch, reshape them to 28*28 and detach the gradient
+    original_imgs = data[:5].view(-1, 28, 28).detach()
+    reconstructed_imgs = decoded_imgs[:5].view(-1, 28, 28).detach()
+
+    fig, axes = plt.subplots(nrows=2, ncols=5, sharex=True, sharey=True, figsize=(12,6))
+
+    # Input images on top row, reconstructions on bottom
+    for images, row in zip([original_imgs, reconstructed_imgs], axes):
+        for img, ax in zip(images, row):
+            ax.imshow(img, cmap='gray')
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+
+    plt.show()
+
+# Continue with the t-SNE visualization
 encoded_images = []
 targets = []
 
