@@ -11,31 +11,18 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import os
-import pandas as pd
 
 #CONSTANTS
 LEARNING_RATE = 1e-3
 BATCH_SIZE = 64
-EPOCHS = 5
+EPOCHS = 20
 DATA_PATH = 'path_to_data'
-ROOT_FOLDER = 'C:\\Users\\james\\autoencoder\\vae_use\\vae_change_hp'
-VISUALIZATION_DIRS = ['loss_plots', 'reconstructed_images', 'tsne_plots', 'confusion_matrices']
-
 
 # Create a new folder with current date and time
-folder_path = 'C:\\Users\\james\\autoencoder\\vae_use'
-#results_folder_path = os.path.join(folder_path, 'results')
+folder_path = 'C:\\Users\\james\\autoencoder\\vae_use\\vae'
+results_folder_path = os.path.join(folder_path, 'results')
 os.makedirs(folder_path, exist_ok=True)
-#os.makedirs(results_folder_path, exist_ok=True)
-
-def create_directories():
-    dir_paths = {}
-    for dir_name in VISUALIZATION_DIRS:
-        dir_path = os.path.join(ROOT_FOLDER, dir_name)
-        os.makedirs(dir_path, exist_ok=True)
-        dir_paths[dir_name] = dir_path
-    
-    return dir_paths
+os.makedirs(results_folder_path, exist_ok=True)
 
 def loss_function(recon_x, x, mu, logvar):
     BCE = nn.functional.binary_cross_entropy(recon_x, x.view(-1, 784), reduction='sum')
@@ -198,14 +185,14 @@ def evaluate_model(model, test_loader, classifier_criterion, optimizer):
         "Calinski-Harabasz Index": cal_har_score,
         "Normalized Mutual Information": nmi_score,
         "Transmitted Information": trans_info,
+        #"Perceptron Transmitted Information": perceptron_trans_info,
         "Weighted F1 Score": f1,
         "Rand Index": rand_index
     }
-    print(metrics)
-    #metrics_df = pd.DataFrame([metrics])
+
     return metrics, ae_losses, classifier_losses, original_imgs, reconstructed_imgs, encoded_images, all_targets, conf_mat, f1, cluster_labels, rand_index
 
-def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifier_losses, original_imgs, reconstructed_imgs, encoded_images, targets, conf_mat, cluster_labels, dir_paths, combo_idx):
+def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifier_losses, original_imgs, reconstructed_imgs, encoded_images, targets, conf_mat, cluster_labels):
     # After training, plot the losses
     fig, axs = plt.subplots(2, figsize=(10,10))
 
@@ -222,9 +209,8 @@ def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifie
     axs[1].set_ylabel("Loss")
     axs[1].legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(dir_paths['loss_plots'], f'loss_plot_combination_{combo_idx}.png'))  # Save plot
+    plt.savefig(os.path.join(results_folder_path, 'loss_plot.png'))  # Save plot instead of showing it
     plt.close(fig)
-    plt.clf()  # clear the figure
 
     # Visualizing the reconstructed images
     fig, axes = plt.subplots(nrows=2, ncols=5, sharex=True, sharey=True, figsize=(12,6))
@@ -237,7 +223,7 @@ def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifie
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
 
-    plt.savefig(os.path.join(dir_paths['reconstructed_images'], f'reconstructed_images_combination_{combo_idx}.png'))  # Save plot instead of showing it
+    plt.savefig(os.path.join(results_folder_path, 'reconstructed_images.png'))  # Save plot instead of showing it
     plt.close(fig)
 
     # Apply t-SNE
@@ -247,9 +233,8 @@ def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifie
     # Plotting t-SNE results
     scatter = plt.scatter(tsne_obj[:, 0], tsne_obj[:, 1], c=targets, cmap='viridis')
     plt.colorbar(scatter)
-    plt.savefig(os.path.join(dir_paths['tsne_plots'], f'tsne_plot_combination_{combo_idx}.png'))  # Save plot instead of showing it
+    plt.savefig(os.path.join(results_folder_path, 'tsne_plot.png'))  # Save plot instead of showing it
     plt.close(fig)
-    plt.clf()
 
     # Apply t-SNE with cluster labels
     tsne_cluster = TSNE(n_components=2, random_state=0)
@@ -258,9 +243,8 @@ def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifie
     # Plotting t-SNE results with cluster labels
     scatter_cluster = plt.scatter(tsne_obj_cluster[:, 0], tsne_obj_cluster[:, 1], c=cluster_labels, cmap='viridis')
     plt.colorbar(scatter_cluster)
-    plt.savefig(os.path.join(dir_paths['tsne_plots'], f'tsne_plot_cluster_combination_{combo_idx}.png'))  # Save plot instead of showing it
+    plt.savefig(os.path.join(results_folder_path, 'tsne_cluster_plot.png'))  # Save plot instead of showing it
     plt.close(fig)
-    plt.clf()
 
     # CONFUSION MATRIX
     plt.figure(figsize=(10, 10))
@@ -268,7 +252,7 @@ def visualize_results(ae_losses, classifier_losses, val_ae_losses, val_classifie
     plt.ylabel('Actual label')
     plt.xlabel('Predicted label')
     plt.title('Confusion matrix')
-    plt.savefig(os.path.join(dir_paths['confusion_matrices'], f'confusion_matrix_combination_{combo_idx}.png'))  # Save plot instead of showing it
+    plt.savefig(os.path.join(results_folder_path, 'confusion_matrix.png'))  # Save plot instead of showing it
     plt.close(fig)
 
 def compute_transmitted_info(conf_mat):
@@ -308,12 +292,12 @@ def train_perceptron(vae_model, perceptron, data_loader, optimizer, criterion):
         loss.backward()
         optimizer.step()
 
-def evaluate_perceptron(vae_model, perceptron, data_loader, criterion, dir_paths, combo_idx):
+def evaluate_perceptron(vae_model, perceptron, data_loader, criterion, folder_path):
     vae_model.eval()
     perceptron.eval()
     all_targets = []
     all_preds = []
-    perceptron_accuracies = {}
+    all_latent = []
     with torch.no_grad():
         for data, targets in data_loader:
             data = data.view(data.size(0), -1)  # Reshape the data
@@ -324,10 +308,30 @@ def evaluate_perceptron(vae_model, perceptron, data_loader, criterion, dir_paths
             _, predicted = torch.max(output.data, 1)
             all_targets.extend(targets)
             all_preds.extend(predicted)
-    accuracy = 100 * sum([a == b for a, b in zip(all_targets, all_preds)]) / len(all_targets)
-    print('Accuracy of the network on the test mu vectors: %d %%' % accuracy)
-    # Save accuracy to the dictionary
-    perceptron_accuracies[str(combo_idx)] = accuracy
+            all_latent.extend(mu.numpy())  # save all the mu vectors
+    all_latent = np.array(all_latent)
+
+    # Now we cluster the latent space representation using KMeans
+    kmeans = KMeans(n_clusters=10, random_state=0).fit(all_latent)
+    # KMeans cluster labels
+    kmeans_labels = kmeans.labels_
+
+    # Get confusion matrix with true labels and KMeans cluster labels
+    kmeans_conf_mat = confusion_matrix(all_targets, kmeans_labels)
+    
+    # KMEANS CONFUSION MATRIX
+    fig = plt.figure(figsize=(10, 10))  # create a new figure
+    sns.heatmap(kmeans_conf_mat, annot=True, fmt=".0f", square=True, cmap='Blues')
+    plt.ylabel('Actual label')
+    plt.xlabel('Cluster label')
+    plt.title('KMeans Confusion matrix')
+    plt.savefig(os.path.join(folder_path, 'perceptron_kmeans_confusion_matrix.png'))  # Save the figure
+    plt.close(fig)  # close the figure
+
+    # Calculate Transmitted Information
+    perceptron_trans_info = compute_transmitted_info(kmeans_conf_mat)
+    print("Transmitted Information Perceptron: ", perceptron_trans_info)
+    print('Accuracy of the network on the perceptron test mu vectors: %d %%' % (100 * sum([a == b for a, b in zip(all_targets, all_preds)]) / len(all_targets)))
     conf_mat = confusion_matrix(all_targets, all_preds)
     
     # CONFUSION MATRIX
@@ -336,9 +340,7 @@ def evaluate_perceptron(vae_model, perceptron, data_loader, criterion, dir_paths
     plt.ylabel('Actual label')
     plt.xlabel('Predicted label')
     plt.title('Perceptron Confusion matrix')
-    plt.savefig(os.path.join(dir_paths['confusion_matrices'], f'perceptron_confusion_matrix_combination_{combo_idx}.png'))  # Save plot instead of showing it
+    plt.savefig(os.path.join(results_folder_path, 'perceptron_confusion_matrix.png'))  # Save the figure
     plt.close(fig)  # close the figure
 
-    return perceptron_accuracies
-
-
+    return perceptron_trans_info
