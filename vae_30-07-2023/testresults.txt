@@ -1,0 +1,19 @@
+PS C:\Users\james\autoencoder\vae_use\vae> python test.py
+For i=0, j=0, nkj is of type <class 'numpy.int32'> and shape ()
+For i=0, j=0, nik is of type <class 'numpy.int32'> and shape ()
+For i=1, j=1, nkj is of type <class 'numpy.int32'> and shape ()
+For i=1, j=1, nik is of type <class 'numpy.int32'> and shape ()
+.For i=0, j=0, nkj is of type <class 'numpy.int32'> and shape ()
+For i=0, j=0, nik is of type <class 'numpy.int32'> and shape ()
+For i=0, j=1, nkj is of type <class 'numpy.int32'> and shape ()
+For i=0, j=1, nik is of type <class 'numpy.int32'> and shape ()
+For i=1, j=0, nkj is of type <class 'numpy.int32'> and shape ()
+For i=1, j=0, nik is of type <class 'numpy.int32'> and shape ()
+For i=1, j=1, nkj is of type <class 'numpy.int32'> and shape ()
+For i=1, j=1, nik is of type <class 'numpy.int32'> and shape ()
+.
+----------------------------------------------------------------------
+Ran 2 tests in 0.006s
+
+OK
+PS C:\Users\james\autoencoder\vae_use\vae> 
